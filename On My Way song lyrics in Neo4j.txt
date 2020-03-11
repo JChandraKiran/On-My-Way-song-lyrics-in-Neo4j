@@ -1,0 +1,15 @@
+
+// 1
+LOAD CSV WITH HEADERS FROM 'file:///On-My-Way.csv' AS csv
+WITH csv.SongPart AS SongPart, csv.SongPartSentence AS SongPartSentence, csv.SongSentence AS row
+UNWIND row AS text
+WITH SongPart, SongPartSentence, REDUCE(t=tolower(text),delim in[".",",","'",":",";"]|REPLACE(t,delim,"")) AS normalized
+WITH SongPart, SongPartSentence,[w in split(normalized," ")|trim(w)] as words
+UNWIND range(0,size(words)-2) AS idx
+MERGE (w1:Word{name:words[idx]})
+MERGE (w2:Word{name:words[idx+1]})
+MERGE (w1)-[r:NEXT{songpart:toInt(SongPart),songpartsentence:toInt(SongPartSentence)}]->(w2)
+
+// [1-1]
+match (w1)-[r:NEXT{songpart:1, songpartsentence:1}]-(w2)
+return  w1,w2,r
